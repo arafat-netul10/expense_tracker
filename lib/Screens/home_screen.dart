@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:expeense_tracker/Widgets/build_summary_card.dart';
+import '../Widgets/build_summary_card.dart';
 import '../Widgets/build_list.dart';
 import '../Models/expense.dart';
 import '../Services/expense_service.dart';
-import '../Services/excel_service.dart';
+import '../Services/export_service.dart';
 import '../Widgets/expense_chart.dart';
-import 'package:expeense_tracker/main.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,13 +39,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   double get balance => totalEarnings - totalExpenses;
 
-  // ================= INIT =================
+  // ================= INIT & DISPOSE =================
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _loadData() {
@@ -88,6 +94,44 @@ class _HomeScreenState extends State<HomeScreen>
         );
       },
     );
+  }
+
+  // ================= EXPORT PDF =================
+
+  void _exportPdf() async {
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context); // close drawer
+
+    final items = ExpenseService.getExpenses();
+    if (items.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("No expenses to export.")),
+      );
+      return;
+    }
+
+    try {
+      final filePath = await ExportService.exportToPdf(items);
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text("Exported as PDF successfully!"),
+          action: SnackBarAction(
+            label: "View",
+            onPressed: () {
+              ExportService.openExportedFile(filePath);
+            },
+          ),
+        ),
+      );
+
+      // Open PDF file for viewing directly
+      await ExportService.openExportedFile(filePath);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text("Failed to export PDF: $e")),
+      );
+    }
   }
 
   // ================= ADD FORM =================
@@ -156,6 +200,9 @@ class _HomeScreenState extends State<HomeScreen>
                           return;
                         }
 
+                        final navigator = Navigator.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+
                         await ExpenseService.addExpense(
                           Expense(
                             title: title,
@@ -165,10 +212,10 @@ class _HomeScreenState extends State<HomeScreen>
                           ),
                         );
 
-                        Navigator.pop(context);
-                        Navigator.pop(context);
+                        navigator.pop();
+                        navigator.pop();
 
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                            SnackBar(
                             content: Text(isEarning ? "Earning added" : "Expense added"),
                           ),
@@ -239,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen>
 
               // 🔷 HEADER (LOGO + APP NAME)
               DrawerHeader(
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Color(0xFF0F172A),
                 ),
                 child: Column(
@@ -249,8 +296,8 @@ class _HomeScreenState extends State<HomeScreen>
                       'assets/et_app_icon.png',
                       width: 80,
                     ),
-                    SizedBox(height: 10),
-                    Text(
+                    const SizedBox(height: 10),
+                    const Text(
                       'Expense Tracker',
                       style: TextStyle(
                         color: Colors.white,
@@ -262,101 +309,59 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
 
-              // 🌙 DARK MODE
-              Card(
-                child: ListTile(
-                  leading: Icon(Icons.dark_mode),
-                  title: Text("Dark Mode"),
-                  trailing: Switch(
-                    value: MyApp.of(context).isDark,
-                    onChanged: (value) {
-                      MyApp.of(context).toggleTheme(value);
-                      setState(() {});
-                    },
-                  ),
-                ),
-              ),
-
-
-
-              // 📊 EXPORT TO EXCEL
-
-              // Card(
-              //   child: ListTile(
-              //     leading: Icon(Icons.file_download),
-              //     title: Text("Export to Excel"),
-              //     onTap: () async {
-              //
-              //       final items = ExpenseService.getExpenses();
-              //
-              //       final path = await ExcelService.export(items);
-              //
-              //       ScaffoldMessenger.of(context).showSnackBar(
-              //         SnackBar(content: Text("Saved to: $path")),
-              //       );
-              //     },
-              //   ),
-              // ),
-
-
               // 📊 EXPENSE CHART
               Card(
                 child: ListTile(
-                  leading: Icon(Icons.bar_chart),
-                  title: Text("Expense Chart"),
-                  onTap: () async {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> ExpenseChart(items: allItems)));
-
-                  },
-                ),
-              ),
-
-              // 🗑️ CLEAR DATA
-              Card(
-                child: ListTile(
-                  leading: Icon(Icons.delete, color: Colors.red),
-                  title: Text("Clear All Data"),
+                  leading: const Icon(Icons.bar_chart),
+                  title: const Text("Expense Chart"),
                   onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: Text("Confirm"),
-                        content: Text("Delete all data?"),
-                        actions: [
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: Text("Cancel"),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              await ExpenseService.clearAll();
-                              Navigator.pop(context);
-                              _loadData();
-                            },
-                            child: Text("Delete"),
-                          ),
-                        ],
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ExpenseChart(items: allItems),
                       ),
                     );
                   },
                 ),
               ),
 
-            
+              // 📁 EXPORT PDF
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                  title: const Text("Export as PDF"),
+                  onTap: _exportPdf,
+                ),
+              ),
+
+              // ⚙️ SETTINGS SCREEN TILE
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text("Settings"),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                    _loadData();
+                  },
+                ),
+              ),
 
               // ℹ️ ABOUT
               Card(
                 child: ListTile(
-                  leading: Icon(Icons.info),
-                  title: Text("About"),
+                  leading: const Icon(Icons.info),
+                  title: const Text("About"),
                   onTap: () {
                     showAboutDialog(
                       context: context,
                       applicationName: "Expense Tracker",
                       applicationVersion: "1.0.0",
-                      children: [
+                      children: const [
                         Text("Simple expense tracking app built with Flutter."),
                       ],
                     );
@@ -373,15 +378,15 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           Row(
             children: [
-              buildSummaryCard(
+              BuildSummaryCard(
                   title: 'Earnings',
                   amount: totalEarnings,
                   cardColor: Colors.greenAccent),
-              buildSummaryCard(
+              BuildSummaryCard(
                   title: 'Expenses',
                   amount: totalExpenses,
                   cardColor: Colors.redAccent),
-              buildSummaryCard(
+              BuildSummaryCard(
                   title: 'Balance',
                   amount: balance,
                   cardColor: Colors.amberAccent),

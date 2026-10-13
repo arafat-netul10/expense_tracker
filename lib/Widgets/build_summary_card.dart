@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class buildSummaryCard extends StatelessWidget {
+class BuildSummaryCard extends StatelessWidget {
 
   final String title;
   final double amount;
   final Color cardColor;
 
-  const buildSummaryCard({
+  const BuildSummaryCard({
     super.key, required this.title, required this.amount, required this.cardColor,
   });
 
@@ -21,16 +21,20 @@ class buildSummaryCard extends StatelessWidget {
             height: 80.0,
             child: Column(
               children: [
-                Text(title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),),
-                Text(amount.toString(),
+                Text(
+                  title,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                  ),),
+                    color: Colors.black,
+                  ),
+                ),
+                Text(
+                  amount.toString(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
               ],
             ),
           ),

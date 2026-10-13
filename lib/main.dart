@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'Models/expense.dart';
-import 'Screens/home_screen.dart';
 import 'Screens/splash_screen.dart';
 
 void main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
 
   await Hive.initFlutter();
@@ -19,14 +17,14 @@ void main() async {
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  static _MyAppState of(BuildContext context) =>
-      context.findAncestorStateOfType<_MyAppState>()!;
+  static MyAppState of(BuildContext context) =>
+      context.findAncestorStateOfType<MyAppState>()!;
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<MyApp> createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   final settingsBox = Hive.box('settings');
   bool isDarkMode = false;
   bool get isDark => isDarkMode;
@@ -34,7 +32,6 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-
     isDarkMode = settingsBox.get('darkMode', defaultValue: false);
   }
 
@@ -50,9 +47,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-
       theme: ThemeData(
         brightness: Brightness.light,
         scaffoldBackgroundColor: Colors.white,
@@ -61,7 +56,6 @@ class _MyAppState extends State<MyApp> {
           centerTitle: true,
         ),
       ),
-
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: Colors.black,
@@ -70,7 +64,6 @@ class _MyAppState extends State<MyApp> {
           centerTitle: true,
         ),
       ),
-
       home: const SplashScreen(),
     );
   }
